@@ -1,15 +1,16 @@
 import pennylane as qml
 import numpy as np
 import tensorflow as tf
-
+    
 import keras
 
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MaxAbsScaler
 from sklearn.preprocessing import MaxAbsScaler
+import pandas as pd
 
-
+from sklearn.metrics import accuracy_score
 from sklearn.decomposition import PCA
 from itertools import combinations
 
@@ -48,8 +49,11 @@ def qnn_circuit(inputs, theta):
     TwoLocal(nqubits = nqubits, theta = theta, reps = 1)
     return qml.expval(qml.Hermitian(M, wires = [0]))
 
+df = pd.read_csv('diabetes.csv')
 
-x,y = load_breast_cancer(return_X_y = True)
+x = df[['Pregnancies','Glucose','BloodPressure','SkinThickness','Insulin','BMI','DiabetesPedigreeFunction','Age']]
+y= df['Outcome']
+# x,y = load_breast_cancer(return_X_y = True)
 
 x_tr, x_test, y_tr, y_test = train_test_split(
     x, y, train_size = 0.8)
@@ -70,7 +74,7 @@ x_test = np.clip(x_test, 0, 1)
 x_val = np.clip(x_val, 0, 1)
 
 
-pca = PCA(n_components = 10)
+pca = PCA(n_components = 4)
 xs_tr = pca.fit_transform(x_tr)
 xs_test = pca.transform(x_test)
 xs_val = pca.transform(x_val)
@@ -106,7 +110,7 @@ history = model.fit(xs_tr, y_tr, epochs = 50, shuffle = True,
     batch_size = 20, 
     callbacks = [earlystop])
 
-
+model.save_weights("qnn_weight.h5")
 
 import matplotlib.pyplot as plt
 
