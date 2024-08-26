@@ -1,0 +1,9 @@
+Kivy==2.3.0
+matplotlib==3.9.1
+Pennylane==0.37.0
+tensorflow==10.4.0
+scikit-learn==1.5.1
+pandas
+qiskit==1.1.1
+qiskit-ibm-provider==0.11.0
+keras==3.5.0
