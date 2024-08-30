@@ -1,0 +1,6 @@
+Kivy==2.3.0
+scikit-learn
+tensorflow==2.15.0
+keras==2.15.0
+pennylane==0.37.0
+matplotlib
