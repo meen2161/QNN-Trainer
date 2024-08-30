@@ -1,6 +1,17 @@
 Kivy==2.3.0
+<<<<<<< HEAD
 scikit-learn
 tensorflow==2.15.0
 keras==2.15.0
 pennylane==0.37.0
 matplotlib
+=======
+matplotlib==3.9.1
+Pennylane==0.37.0
+tensorflow==10.4.0
+scikit-learn==1.5.1
+pandas
+qiskit==1.1.1
+qiskit-ibm-provider==0.11.0
+keras==3.5.0
+>>>>>>> origin/for-neuron-network
