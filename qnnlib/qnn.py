@@ -288,16 +288,17 @@ class QNNLib:
 
 
 # Example usage
-qnnlib = QNNLib(nqubits=8, device_name="lightning.qubit")
-qnnlib.run_experiment(
-    data_path='diabetes.csv', 
-    target='Outcome', 
-    test_size=0.3,
-    model_output_path='qnn_model.keras', 
-    csv_output_path='training_progress.csv',
-    batch_size=10,
-    epochs=2,
-    reps=2048,
-    scaler=MinMaxScaler(),
-    seed=1234
-)
+if __name__ == '__main__':
+    qnnlib = QNNLib(nqubits=8, device_name="lightning.qubit")
+    qnnlib.run_experiment(
+        data_path='diabetes.csv', 
+        target='Outcome', 
+        test_size=0.3,
+        model_output_path='qnn_model.keras', 
+        csv_output_path='training_progress.csv',
+        batch_size=10,
+        epochs=2,
+        reps=2048,
+        scaler=MinMaxScaler(),
+        seed=1234
+    )
