@@ -25,8 +25,9 @@ class Widget(QWidget):
 
         # Initialize variables
         self.csv_file = ""
-        self.backend = "default.qubit"
+        self.backend = "lightning.qubit"
         self.number_of_qubits = 5
+        self.reps = 1
         self.dev = ""
 
         #IBMProvider.save_account("c6114a56ebddc3cdae7337953a114c0d8bca94aa0e079ee893a7415b102dc3aab8b46db8306bd72726b9af72f42cad98f789cb15adcf1a466a99f0b79c124a43", overwrite=True)
@@ -69,19 +70,19 @@ class Widget(QWidget):
             qml.RZ(2.0 * (np.pi - data[:, q0]) * (np.pi - data[:, q1]), wires=q1)
             qml.CZ(wires=[q0, q1])
 
-    def TwoLocal(self, nqubits, theta, reps=1):
+    def TwoLocal(self, nqubits, theta, reps):
         for r in range(reps):
             for i in range(nqubits):
                 qml.RY(theta[r * nqubits + i], wires=i)
             for i in range(nqubits - 1):
                 qml.CNOT(wires=[i, i + 1])
         for i in range(nqubits):
+            print(reps)
             qml.RY(theta[reps * nqubits + i], wires=i)
 
     def qnn_circuit(self, inputs, theta):
-        print("Number of qubits : ", self.number_of_qubits)
         self.ZZFeatureMap(self.number_of_qubits, inputs)
-        self.TwoLocal(nqubits=self.number_of_qubits, theta=theta, reps=1)
+        self.TwoLocal(nqubits=self.number_of_qubits, theta=theta, reps=self.reps)
         return qml.expval(qml.Hermitian(self.M_global, wires=[0]))
 
     def start_training(self):
@@ -90,19 +91,19 @@ class Widget(QWidget):
             return
         
         try:
-            epochs = int(self.ui.textEdit_2.toPlainText())
-            train_test_split_ratio = int(self.ui.textEdit_3.toPlainText())
-            batch_size = int(self.ui.textEdit_4.toPlainText())
-            self.number_of_qubits = int(self.ui.textEdit_6.toPlainText())
+            epochs = int(self.ui.EpochsInput.toPlainText())
+            train_test_split_ratio = int(self.ui.TrainSplitInput.toPlainText())
+            batch_size = int(self.ui.BatchInput.toPlainText())
+            self.reps = int(self.ui.RepsInput.toPlainText())
+            print(self.reps)
+            self.number_of_qubits = int(self.ui.NumOQubInput.toPlainText())
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter valid numerical values.")
             return
         
 
-        state_0 = [[1], [0]]
-        print(state_0 * np.conj(state_0).T)
-        self.M_global = state_0 * np.conj(state_0).T
         
+
         """
         if self.backend == 'Simulator':
             self.dev = qml.device("default.qubit", wires=self.number_of_qubits)
@@ -136,8 +137,11 @@ class Widget(QWidget):
         
         print(xs_tr)
 
+        state_0 = [[1], [0]]
+        print(state_0 * np.conj(state_0).T)
+        self.M_global = state_0 * np.conj(state_0).T
 
-
+    
         self.dev = qml.device(self.backend, wires=self.number_of_qubits)
         qnn = qml.QNode(self.qnn_circuit, self.dev, interface="tf")
 
@@ -155,6 +159,8 @@ class Widget(QWidget):
 
         #earlystop = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=2, verbose=1, restore_best_weights=True)
 
+        print (xs_tr.shape)
+        print (y_tr.shape)
         
         history = model.fit(xs_tr, y_tr, epochs=epochs, shuffle=True,
                             validation_data=(xs_val, y_val),
@@ -163,7 +169,6 @@ class Widget(QWidget):
         
         model.save("qnn.h5")
         
-
 
 
         """
