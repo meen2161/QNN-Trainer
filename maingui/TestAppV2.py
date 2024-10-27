@@ -6,7 +6,7 @@ import pennylane as qml
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MaxAbsScaler, MinMaxScaler
 from sklearn.decomposition import PCA
-from PySide6.QtWidgets import QApplication, QWidget, QMessageBox, QFileDialog
+from PySide6.QtWidgets import QApplication, QWidget, QMessageBox, QFileDialog, QTextEdit
 from ui_form import Ui_Widget
 from itertools import combinations
 from qiskit_ibm_provider import IBMProvider
@@ -30,6 +30,15 @@ class Widget(QWidget):
         self.ui.pushButton.clicked.connect(self.open_file_picker)
         self.ui.pushButton_2.clicked.connect(self.start_training)
         self.ui.comboBox.currentTextChanged.connect(self.update_backend)
+
+        # Connect the QTextEdit elements from the UI file
+        # Initialize your inputs here if needed
+        self.NumOQubEdit = self.ui.NumOQubEdit
+        self.EpochsEdit = self.ui.EpochsEdit
+        self.TrainSplitEdit = self.ui.TrainSplitEdit
+        self.BatchEdit = self.ui.BatchEdit
+        self.RepsEdit = self.ui.RepsEdit
+        self.ExportNameEdit = self.ui.ExportNameEdit
 
     def open_file_picker(self):
         file_name, _ = QFileDialog.getOpenFileName(self, "Select CSV File", "", "CSV Files (*.csv)")
@@ -71,26 +80,23 @@ class Widget(QWidget):
     def qnn_circuit(self, inputs, theta):
         self.ZZFeatureMap(self.number_of_qubits, inputs)
         self.TwoLocal(nqubits=self.number_of_qubits, theta=theta, reps=self.reps)
-        # expval = qml.expval(qml.Hermitian(self.M_global, wires=[0]))
-        # print(expval)
-        # return tf.math.real(expval)
         return qml.expval(qml.Hermitian(self.M_global, wires=[0]))
-
-    # def convert_complex_to_real(complex_tensor):
-    #     return tf.math.real(complex_tensor)
     
 
     def start_training(self):
+        print("Traning start...")
         if not self.csv_file:
             QMessageBox.warning(self, "Warning", "Please select a CSV file before starting the training.")
             return
 
         try:
-            epochs = int(self.ui.EpochsInput.toPlainText())
-            train_test_split_ratio = int(self.ui.TrainSplitInput.toPlainText())
-            batch_size = int(self.ui.BatchInput.toPlainText())
-            self.reps = int(self.ui.RepsInput.toPlainText())
-            self.number_of_qubits = int(self.ui.NumOQubInput.toPlainText())
+            epochs = int(self.EpochsEdit.text())  # ใช้ EpochsEdit
+            train_test_split_ratio = int(self.TrainSplitEdit.text())
+            batch_size = int(self.BatchEdit.text())
+            self.reps = int(self.RepsEdit.text())
+            self.number_of_qubits = int(self.NumOQubEdit.text())
+            if train_test_split_ratio < 0 or train_test_split_ratio > 100:
+                raise ValueError("Train/Test split ratio must be between 0 and 100.")
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter valid numerical values.")
             return
@@ -105,13 +111,30 @@ class Widget(QWidget):
         )
 
     def run_qnnlib_experiment(self, data_path, target_column, test_size, batch_size, epochs, reps):
+        df = pd.read_csv(data_path)
+        print(f"จำนวนข้อมูลก่อนการทำ Data Cleansing: {df.shape}")
+        # ตรวจหาและจัดการ Missing Values
+        if df.isnull().values.any():
+            print("ตรวจพบ Missing Values. กำลังเติมค่าเฉลี่ยในแต่ละคอลัมน์.")
+            df.fillna(df.mean(), inplace=True)
+
+        # กำจัด Outliers โดยใช้ Z-score (หากค่าเกิน 3 หรือ -3 ถือว่าเป็น Outlier)
+        from scipy.stats import zscore
+        df = df[(np.abs(zscore(df.select_dtypes(include=[np.number]))) < 3).all(axis=1)]
+        print(f"จำนวนข้อมูลหลังการทำ Data Cleansing: {df.shape}")
+        
+        clean_data_path = "cleaned_data.csv"
+        df.to_csv(clean_data_path, index=False)
+
+        print(f"Cleaned data saved to: {clean_data_path}")
+
         qnn = qnnlib.qnnlib(nqubits=self.number_of_qubits, device_name=self.backend)
 
         # Set the output paths for model and progress
-        model_output_path = 'qnn_model_output_Maternal_Health_Risk_DataSet_100reps.h5'
-        csv_output_path = 'training_progress_Maternal_Health_Risk_DataSet_100reps.csv'
-        loss_plot_file = 'loss_plot_Maternal_Health_Risk_DataSet_100reps.png'
-        accuracy_plot_file = 'accuracy_plot_Maternal_Health_Risk_DataSet_100reps.png'
+        model_output_path = 'qnn_model_output_Maternal_Health_Risk_DataSet_10reps.h5'
+        csv_output_path = 'training_progress_Maternal_Health_Risk_DataSet_10reps.csv'
+        loss_plot_file = 'loss_plot_Maternal_Health_Risk_DataSet_10reps.png'
+        accuracy_plot_file = 'accuracy_plot_Maternal_Health_Risk_DataSet_10reps.png'
         print(f'Data path: {data_path}')
         print(f'Taget column: {target_column}')
         print(f'Test size: {test_size}')
@@ -121,7 +144,7 @@ class Widget(QWidget):
 
         # Run the experiment using qnnlib
         qnn.run_experiment(
-            data_path=data_path,
+            data_path=clean_data_path,
             target=target_column,
             test_size=test_size,
             model_output_path=model_output_path,
@@ -131,7 +154,6 @@ class Widget(QWidget):
             batch_size=batch_size,
             epochs=epochs,
             reps=reps,
-            scaler=MinMaxScaler(),
             optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=0.001),
             seed=1234
         )

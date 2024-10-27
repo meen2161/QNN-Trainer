@@ -1,1 +1,9 @@
 PySide6
+Kivy==2.3.0
+tensorflow==2.15.0
+keras==2.15.0
+pennylane==0.37.0
+matplotlib
+pandas
+scikit-learn==1.5.1
+qiskit-ibm-provider==0.11.0
