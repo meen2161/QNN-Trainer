@@ -6,9 +6,11 @@ import pennylane as qml
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MaxAbsScaler, MinMaxScaler
 from sklearn.decomposition import PCA
-from PySide6.QtWidgets import QApplication, QWidget, QMessageBox, QFileDialog, QTextEdit
+from PySide6.QtWidgets import QApplication, QWidget, QMessageBox, QFileDialog
 from ui_form import Ui_Widget
 from itertools import combinations
+from scipy.stats import zscore
+from sklearn.preprocessing import LabelEncoder
 from qiskit_ibm_provider import IBMProvider
 import qnnlib
 
@@ -95,6 +97,7 @@ class Widget(QWidget):
             batch_size = int(self.BatchEdit.text())
             self.reps = int(self.RepsEdit.text())
             self.number_of_qubits = int(self.NumOQubEdit.text())
+
             if train_test_split_ratio < 0 or train_test_split_ratio > 100:
                 raise ValueError("Train/Test split ratio must be between 0 and 100.")
         except ValueError:
@@ -103,23 +106,34 @@ class Widget(QWidget):
         # Set up the experiment with qnnlib
         self.run_qnnlib_experiment(
             data_path=self.csv_file,
-            target_column='RiskLevel',  # Assuming "Outcome" is the target column in your dataset
-            test_size=1 - (train_test_split_ratio / 100),
+            #target_column='RiskLevel',  # Assuming "Outcome" is the target column in your dataset
+            test_size=train_test_split_ratio / 100,
             batch_size=batch_size,
             epochs=epochs,
             reps=self.reps
         )
 
-    def run_qnnlib_experiment(self, data_path, target_column, test_size, batch_size, epochs, reps):
+    def run_qnnlib_experiment(self, data_path, test_size, batch_size, epochs, reps):
         df = pd.read_csv(data_path)
         print(f"จำนวนข้อมูลก่อนการทำ Data Cleansing: {df.shape}")
         # ตรวจหาและจัดการ Missing Values
-        if df.isnull().values.any():
-            print("ตรวจพบ Missing Values. กำลังเติมค่าเฉลี่ยในแต่ละคอลัมน์.")
-            df.fillna(df.mean(), inplace=True)
+        for column in df.columns:
+            if df[column].isnull().any():
+                if df[column].dtype in ['float64', 'int64']:
+                    print(f"เติมค่าเฉลี่ยในคอลัมน์: {column}")
+                    df[column].fillna(df[column].mean(), inplace=True)
+                else:
+                    print(f"เติมค่าที่พบบ่อยที่สุดในคอลัมน์: {column}")
+                    df[column].fillna(df[column].mode()[0], inplace=True)
+        # แปลง Categorical Features เป็นตัวเลข
+        label_encoders = {}  # เก็บ LabelEncoders สำหรับการแปลงกลับ (ถ้าจำเป็น)
+        for column in df.select_dtypes(include=['object']).columns:
+            print(f"แปลงข้อมูล Categorical ในคอลัมน์: {column}")
+            le = LabelEncoder()
+            df[column] = le.fit_transform(df[column])
+            label_encoders[column] = le  # เก็บ encoder สำหรับ reference
 
         # กำจัด Outliers โดยใช้ Z-score (หากค่าเกิน 3 หรือ -3 ถือว่าเป็น Outlier)
-        from scipy.stats import zscore
         df = df[(np.abs(zscore(df.select_dtypes(include=[np.number]))) < 3).all(axis=1)]
         print(f"จำนวนข้อมูลหลังการทำ Data Cleansing: {df.shape}")
         
@@ -127,14 +141,18 @@ class Widget(QWidget):
         df.to_csv(clean_data_path, index=False)
 
         print(f"Cleaned data saved to: {clean_data_path}")
+        target_column = df.columns[-1]
+
 
         qnn = qnnlib.qnnlib(nqubits=self.number_of_qubits, device_name=self.backend)
 
         # Set the output paths for model and progress
-        model_output_path = 'qnn_model_output_Maternal_Health_Risk_DataSet_10reps.h5'
-        csv_output_path = 'training_progress_Maternal_Health_Risk_DataSet_10reps.csv'
-        loss_plot_file = 'loss_plot_Maternal_Health_Risk_DataSet_10reps.png'
-        accuracy_plot_file = 'accuracy_plot_Maternal_Health_Risk_DataSet_10reps.png'
+        model_output_path = self.ExportNameEdit.text()
+        if not model_output_path.endswith(".h5"):
+            model_output_path += ".h5"
+        csv_output_path = 'training_progress.csv'
+        loss_plot_file = 'loss_plot.png'
+        accuracy_plot_file = 'accuracy_plot.png'
         print(f'Data path: {data_path}')
         print(f'Taget column: {target_column}')
         print(f'Test size: {test_size}')
