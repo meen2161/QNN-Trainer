@@ -4,13 +4,13 @@ import pandas as pd
 import tensorflow as tf
 import pennylane as qml
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MaxAbsScaler, MinMaxScaler
+from sklearn.preprocessing import MaxAbsScaler, MinMaxScaler, LabelEncoder, StandardScaler
 from sklearn.decomposition import PCA
 from PySide6.QtWidgets import QApplication, QWidget, QMessageBox, QFileDialog
 from ui_form import Ui_Widget
 from itertools import combinations
 from scipy.stats import zscore
-from sklearn.preprocessing import LabelEncoder
+from sklearn.impute import SimpleImputer
 from qiskit_ibm_provider import IBMProvider
 import qnnlib
 
@@ -107,7 +107,7 @@ class Widget(QWidget):
         self.run_qnnlib_experiment(
             data_path=self.csv_file,
             #target_column='RiskLevel',  # Assuming "Outcome" is the target column in your dataset
-            test_size=train_test_split_ratio / 100,
+            test_size= train_test_split_ratio / 100,
             batch_size=batch_size,
             epochs=epochs,
             reps=self.reps
@@ -117,25 +117,43 @@ class Widget(QWidget):
         df = pd.read_csv(data_path)
         print(f"จำนวนข้อมูลก่อนการทำ Data Cleansing: {df.shape}")
         # ตรวจหาและจัดการ Missing Values
-        for column in df.columns:
-            if df[column].isnull().any():
-                if df[column].dtype in ['float64', 'int64']:
-                    print(f"เติมค่าเฉลี่ยในคอลัมน์: {column}")
-                    df[column].fillna(df[column].mean(), inplace=True)
-                else:
-                    print(f"เติมค่าที่พบบ่อยที่สุดในคอลัมน์: {column}")
-                    df[column].fillna(df[column].mode()[0], inplace=True)
+        # for column in df.columns:
+        #     if df[column].isnull().any():
+        #         if df[column].dtype in ['float64', 'int64']:
+        #             df[column].fillna(df[column].interpolate(method='linear', limit_direction='forward'), inplace=True)
+        #         else:
+        #             df[column].fillna(df[column].mode()[0], inplace=True)
+        numeric_imputer = SimpleImputer(strategy='mean')  # เติมค่าเฉลี่ยสำหรับตัวเลข
+        categorical_imputer = SimpleImputer(strategy='most_frequent')  # เติมค่า mode สำหรับข้อความ
+        # แยกข้อมูลตามประเภท (ตัวเลขและข้อความ)
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        categorical_cols = df.select_dtypes(exclude=[np.number]).columns
+        if not numeric_cols.empty:
+            df[numeric_cols] = numeric_imputer.fit_transform(df[numeric_cols])
+
+        if not categorical_cols.empty:
+            df[categorical_cols] = categorical_imputer.fit_transform(df[categorical_cols])
+            
+            
         # แปลง Categorical Features เป็นตัวเลข
         label_encoders = {}  # เก็บ LabelEncoders สำหรับการแปลงกลับ (ถ้าจำเป็น)
-        for column in df.select_dtypes(include=['object']).columns:
-            print(f"แปลงข้อมูล Categorical ในคอลัมน์: {column}")
+        # for column in df.select_dtypes(include=['object']).columns:
+        #     print(f"แปลงข้อมูล Categorical ในคอลัมน์: {column}")
+        #     le = LabelEncoder()
+        #     df[column] = le.fit_transform(df[column])
+        #     label_encoders[column] = le  # เก็บ encoder สำหรับ reference
+        for col in categorical_cols:
             le = LabelEncoder()
-            df[column] = le.fit_transform(df[column])
-            label_encoders[column] = le  # เก็บ encoder สำหรับ reference
+            df[col] = le.fit_transform(df[col])
+            label_encoders[col] = le
 
         # กำจัด Outliers โดยใช้ Z-score (หากค่าเกิน 3 หรือ -3 ถือว่าเป็น Outlier)
-        df = df[(np.abs(zscore(df.select_dtypes(include=[np.number]))) < 3).all(axis=1)]
+        df = df[(np.abs(zscore(df[numeric_cols])) < 3).all(axis=1)]
         print(f"จำนวนข้อมูลหลังการทำ Data Cleansing: {df.shape}")
+        
+        scaler = StandardScaler()
+        df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
+        
         
         clean_data_path = "cleaned_data.csv"
         df.to_csv(clean_data_path, index=False)
@@ -150,9 +168,9 @@ class Widget(QWidget):
         model_output_path = self.ExportNameEdit.text()
         if not model_output_path.endswith(".h5"):
             model_output_path += ".h5"
-        csv_output_path = 'training_progress.csv'
-        loss_plot_file = 'loss_plot.png'
-        accuracy_plot_file = 'accuracy_plot.png'
+        csv_output_path = 'training_progress_iris.csv'
+        loss_plot_file = 'loss_plot_wine10reps.png'
+        accuracy_plot_file = 'accuracy_plot_wine10reps.png'
         print(f'Data path: {data_path}')
         print(f'Taget column: {target_column}')
         print(f'Test size: {test_size}')
