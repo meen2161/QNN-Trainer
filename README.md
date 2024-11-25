@@ -1,1 +1,1 @@
-# NSC-qml-with-kivy
+# QNN Trainer

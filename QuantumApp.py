@@ -57,7 +57,7 @@ class QuantumMLApp(BoxLayout):
     #dev = None
 
 
-    number_of_qubits = 4
+    number_of_qubits = 5
 
     dev = qml.device("default.qubit", wires=number_of_qubits)
 
@@ -100,14 +100,34 @@ class QuantumMLApp(BoxLayout):
         
         # Create a horizontal BoxLayout for the file picker button and label
         file_picker_layout = BoxLayout(orientation='horizontal')
-        # Selected file label
-        self.selected_file_label = Label(text='No file selected', size_hint=(None, None), size=(1000, 100), pos_hint={'center_x': 0.5, 'center_y': 0.5})
-        file_picker_layout.add_widget(self.selected_file_label)
+
+        spacer = Widget(size_hint_x=None, width=200)
+        file_picker_layout.add_widget(spacer)
 
         # File picker button
-        file_picker_button = Button(text='Select CSV File',size_hint=(None, None), size=(500, 100), pos_hint={'center_x': 0.7, 'center_y': 0.5})
+        file_picker_button = Button(text='Select CSV File',size_hint=(None, None), size=(500, 100),pos_hint= {'center_x': 0.5,'center_y': 0.2})
         file_picker_button.bind(on_press=self.open_file_picker)
         file_picker_layout.add_widget(file_picker_button)
+
+
+        spacer = Widget(size_hint_x=None, width=200)  # Adjust width as needed
+        file_picker_layout.add_widget(spacer)
+
+        api_key_layout = BoxLayout(orientation='horizontal', size_hint=(None, None), size=(100, 100),pos_hint = {'center_x': 0.5,'center_y': 0.2})
+
+        # Add the API key label
+        api_key_label = Label(text='Api Key:', size_hint=(None, None), size=(100, 50),pos_hint = {'center_x': 0.5,'center_y': 0.2})
+        api_key_layout.add_widget(api_key_label)
+
+        # Add the TextInput next to the label
+        self.api_key_input = TextInput(multiline=False, size_hint=(None, None), size=(500, 50),pos_hint = {'center_x': 0.5,'center_y': 0.2})
+        api_key_layout.add_widget(self.api_key_input)
+        
+        # Selected file label
+        self.selected_file_label = Label(text='No file select', size_hint=(None, None), size=(100, 50),pos_hint= {'center_x': 0.5,'center_y': 0.2})
+        file_picker_layout.add_widget(self.selected_file_label)
+
+
         
 
 
@@ -119,31 +139,54 @@ class QuantumMLApp(BoxLayout):
             text='Simulator',
             values=('Simulator', 'Real Quantum Machine'),
             size_hint=(None, None),
-            size=(400, 44),
-            pos_hint={'center_x': 0.5,'center_y': 100}
+            size=(500, 44),
+            pos_hint={'center_x': 0.234,'center_y': 150}
         )
         backend_spinner.bind(text=self.update_backend)
         self.add_widget(backend_spinner)
 
+        
+
         # Configuration inputs
         config_layout = BoxLayout(orientation='vertical')
         # Epochs input
-        config_layout.add_widget(Label(text='Epochs:', size_hint=(None, None), size=(100, 44),pos_hint = {'center_x': 0.2,'center_y': 0.0}))
-        self.epochs_input = TextInput(multiline=False, size_hint=(None, None), size=(100, 44),pos_hint = {'center_x': 0.2,'center_y': 0.0})
-        config_layout.add_widget(self.epochs_input)
+        
+        # Add the horizontal layout to the main config layout
+        config_layout.add_widget(api_key_layout)
+
+
+
+        epochs_layout = BoxLayout(orientation='horizontal', size_hint=(None, None), size=(400, 44), pos_hint={'center_x': 0.2, 'center_y': 0.5})
+        label_epochs = Label(text='Epochs:', size_hint=(None, None), size=(150, 44))
+        label_epochs.bind(size=lambda s, w: setattr(s, 'text_size', (w, None)))  # Adjust text size to the Label's width
+        label_epochs.halign = 'right'  # Align text to the right
+        epochs_layout.add_widget(label_epochs)
+        self.epochs_input = TextInput(multiline=False, size_hint=(1, None), size=(250, 44))
+        epochs_layout.add_widget(self.epochs_input)
+        config_layout.add_widget(epochs_layout)
 
         # Train/Test split input
-        config_layout.add_widget(Label(text='Train/Test Split (%):', size_hint=(None, None), size=(100, 44),pos_hint = {'center_x': 0.2,'center_y': 0.0}))
-        self.split_input = TextInput(multiline=False, size_hint=(None, None), size=(100, 44),pos_hint = {'center_x': 0.2,'center_y': 0.0})
-        config_layout.add_widget(self.split_input)
+        split_layout = BoxLayout(orientation='horizontal', size_hint=(None, None), size=(400, 44), pos_hint={'center_x': 0.2, 'center_y': 0.5})
+        label_split = Label(text='Train/Test Split (%):', size_hint=(None, None), size=(150, 44))
+        label_split.bind(size=lambda s, w: setattr(s, 'text_size', (w, None)))  # Adjust text size to the Label's width
+        label_split.halign = 'right'  # Align text to the right
+        split_layout.add_widget(label_split)
+        self.split_input = TextInput(multiline=False, size_hint=(1, None), size=(250, 44))
+        split_layout.add_widget(self.split_input)
+        config_layout.add_widget(split_layout)
 
         # Batch size input
-        config_layout.add_widget(Label(text='Batch Size:', size_hint=(None, None), size=(100, 44),pos_hint = {'center_x': 0.2,'center_y': 0.0}))
-        self.batch_input = TextInput(multiline=False, size_hint=(None, None), size=(100, 44),pos_hint = {'center_x': 0.2,'center_y': 0.0})
-        config_layout.add_widget(self.batch_input)
+        batch_layout = BoxLayout(orientation='horizontal', size_hint=(None, None), size=(400, 44), pos_hint={'center_x': 0.2, 'center_y': 0.5})
+        label_batch = Label(text='Batch Size:', size_hint=(None, None), size=(150, 44))
+        label_batch.bind(size=lambda s, w: setattr(s, 'text_size', (w, None)))  # Adjust text size to the Label's width
+        label_batch.halign = 'right'  # Align text to the right
+        batch_layout.add_widget(label_batch)
+        self.batch_input = TextInput(multiline=False, size_hint=(1, None), size=(250, 44))
+        batch_layout.add_widget(self.batch_input)
+        config_layout.add_widget(batch_layout)
+
 
         self.add_widget(config_layout)
-
         # Status bar
         self.status_bar = Label(text='Current Epoch: 0')
         self.add_widget(self.status_bar)
@@ -167,13 +210,15 @@ class QuantumMLApp(BoxLayout):
 
     def update_backend(self, spinner, text):
         self.backend = text
+        self.dev = qml.device(text, wires=self.number_of_qubits)
+        """
         if self.backend == 'Simulator':
             self.dev = qml.device("default.qubit", wires=self.number_of_qubits)
         
         else:
             self.dev = qml.device('qiskit.ibmq', wires=self.number_of_qubits, backend='ibm_kyoto')
 
-
+        """
 
         print(f'Backend selected: {self.backend}')
 
